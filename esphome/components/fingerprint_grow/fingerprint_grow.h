@@ -210,6 +210,9 @@ class FingerprintGrowComponent : public PollingComponent, public uart::UARTDevic
   CallbackManager<void(uint8_t, uint16_t)> enrollment_scan_callback_;
   CallbackManager<void(uint16_t)> enrollment_done_callback_;
   CallbackManager<void(uint16_t)> enrollment_failed_callback_;
+  Adafruit_Fingerprint *fingerprintSensor = nullptr; // Initialize to nullptr
+  int config_value;
+};
 };
 
 class FingerScanStartTrigger : public Trigger<> {
