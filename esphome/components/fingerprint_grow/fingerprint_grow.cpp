@@ -9,6 +9,17 @@ static const char *const TAG = "fingerprint_grow";
 
 // Based on Adafruit's library: https://github.com/adafruit/Adafruit-Fingerprint-Sensor-Library
 
+FingerprintGrowComponent::FingerprintGrowComponent() {
+    // Initialization can be done here if needed
+}
+
+FingerprintGrowComponent::~FingerprintGrowComponent() {
+    if (this->fingerprintSensor != nullptr) {
+        delete this->fingerprintSensor;
+        this->fingerprintSensor = nullptr;
+    }
+}
+
 void FingerprintGrowComponent::update() {
   if (this->enrollment_image_ > this->enrollment_buffers_) {
     this->finish_enrollment(this->save_fingerprint_());
@@ -338,6 +349,30 @@ void FingerprintGrowComponent::led_control(bool state) {
       break;
   }
 }
+
+bool FingerprintGrowComponent::captureFingerprint() {
+    const int max_retries = 5;
+    int retry_count = 0;
+
+    while (retry_count < max_retries) {
+        if (this->fingerprintSensor == nullptr) {
+            ESP_LOGE(TAG, "Fingerprint sensor is not initialized.");
+            return false;
+        }
+
+        int result = this->fingerprintSensor->getImage();
+        if (result == FINGERPRINT_OK) {
+            return true;
+        } else {
+            ESP_LOGW(TAG, "Failed to capture fingerprint. Retrying... (%d/%d)", retry_count + 1, max_retries);
+            retry_count++;
+            delay(100); // Add a small delay between retries
+        }
+    }
+
+    ESP_LOGE(TAG, "Failed to capture fingerprint after %d attempts.", max_retries);
+    return false;
+
 
 void FingerprintGrowComponent::aura_led_control(uint8_t state, uint8_t speed, uint8_t color, uint8_t count) {
   const uint32_t now = millis();
