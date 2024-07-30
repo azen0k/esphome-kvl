@@ -94,9 +94,12 @@ enum GrowAuraLEDColor {
 
 class FingerprintGrowComponent : public PollingComponent, public uart::UARTDevice {
  public:
-  void update() override;
+  FingerprintGrowComponent();
+  ~FingerprintGrowComponent();
+
   void setup() override;
-  void dump_config() override;
+  void loop() override;
+  bool captureFingerprint();
 
   void set_address(uint32_t address) {
     this->address_[0] = (uint8_t) (address >> 24);
