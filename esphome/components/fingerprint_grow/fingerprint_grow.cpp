@@ -112,6 +112,22 @@ void FingerprintGrowComponent::setup() {
   this->mark_failed();
 }
 
+void FingerprintGrowComponent::dump_config() {
+  if (this->power_pin_ != nullptr) {
+    LOG_PIN("  Power Pin: ", this->power_pin_);
+  }
+  LOG_PIN("  RX Pin: ", this->rx_pin_);
+  LOG_PIN("  TX Pin: ", this->tx_pin_);
+}
+
+void FingerprintGrowComponent::loop() {
+  // Implementation of loop function
+}
+
+bool FingerprintGrowComponent::check_finger_removed() {
+  // Implementation of check_finger_removed function
+}
+
 void FingerprintGrowComponent::enroll_fingerprint(uint16_t finger_id, uint8_t num_buffers) {
   ESP_LOGI(TAG, "Starting enrollment in slot %d", finger_id);
   if (this->enrolling_binary_sensor_ != nullptr) {
@@ -140,32 +156,25 @@ void FingerprintGrowComponent::finish_enrollment(uint8_t result) {
 }
 
 void FingerprintGrowComponent::scan_and_match_() {
-  if (this->has_sensing_pin_) {
-    ESP_LOGD(TAG, "Scan and match");
-  } else {
-    ESP_LOGV(TAG, "Scan and match");
-  }
-  if (this->scan_image_(1) == OK) {
-    this->waiting_removal_ = true;
-    this->data_ = {SEARCH, 0x01, 0x00, 0x00, (uint8_t) (this->capacity_ >> 8), (uint8_t) (this->capacity_ & 0xFF)};
-    switch (this->send_command_()) {
-      case OK: {
-        ESP_LOGD(TAG, "Fingerprint matched");
-        uint16_t finger_id = ((uint16_t) this->data_[1] << 8) | this->data_[2];
-        uint16_t confidence = ((uint16_t) this->data_[3] << 8) | this->data_[4];
-        if (this->last_finger_id_sensor_ != nullptr) {
-          this->last_finger_id_sensor_->publish_state(finger_id);
+  uint8_t result = this->scan_image_(0); // assuming 0 is the buffer index
+  if (result == ESP_FINGERPRINT_OK) {
+    result = this->image2Tz(1);
+    if (result == ESP_FINGERPRINT_OK) {
+      result = this->fingerFastSearch();
+      if (result == ESP_FINGERPRINT_OK) {
+        ESP_LOGD(TAG, "Fingerprint matched ID: %u", this->finger_->fingerID);
+        if (this->on_finger_scan_matched_) {
+          this->on_finger_scan_matched_->call(this->finger_->fingerID);
         }
-        if (this->last_confidence_sensor_ != nullptr) {
-          this->last_confidence_sensor_->publish_state(confidence);
+      } else {
+        if (this->on_finger_scan_unmatched_) {
+          this->on_finger_scan_unmatched_->call();
         }
-        this->finger_scan_matched_callback_.call(finger_id, confidence);
-        break;
       }
-      case NOT_FOUND:
-        ESP_LOGD(TAG, "Fingerprint not matched to any saved slots");
-        this->finger_scan_unmatched_callback_.call();
-        break;
+    } else {
+      if (this->on_finger_scan_failed_) {
+        this->on_finger_scan_failed_->call();
+      }
     }
   }
 }
