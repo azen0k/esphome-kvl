@@ -94,12 +94,11 @@ enum GrowAuraLEDColor {
 
 class FingerprintGrowComponent : public PollingComponent, public uart::UARTDevice {
  public:
-  FingerprintGrowComponent();
-  ~FingerprintGrowComponent();
-
-  void setup() override;
-  void loop() override;
-  bool captureFingerprint();
+    void setup() override;
+    void loop() override;
+    void dump_config() override;
+    bool check_finger_removed();
+    void scan_and_match_();
 
   void set_address(uint32_t address) {
     this->address_[0] = (uint8_t) (address >> 24);
@@ -210,8 +209,9 @@ class FingerprintGrowComponent : public PollingComponent, public uart::UARTDevic
   CallbackManager<void(uint8_t, uint16_t)> enrollment_scan_callback_;
   CallbackManager<void(uint16_t)> enrollment_done_callback_;
   CallbackManager<void(uint16_t)> enrollment_failed_callback_;
-  Adafruit_Fingerprint *fingerprintSensor = nullptr; // Initialize to nullptr
-  int config_value;
+  Adafruit_Fingerprint *finger_;
+  GPIOPin *power_pin_;
+  bool has_power_pin_;
 };
 };
 
