@@ -9,17 +9,6 @@ static const char *const TAG = "fingerprint_grow";
 
 // Based on Adafruit's library: https://github.com/adafruit/Adafruit-Fingerprint-Sensor-Library
 
-FingerprintGrowComponent::FingerprintGrowComponent() {
-    // Initialization can be done here if needed
-}
-
-FingerprintGrowComponent::~FingerprintGrowComponent() {
-    if (this->fingerprintSensor != nullptr) {
-        delete this->fingerprintSensor;
-        this->fingerprintSensor = nullptr;
-    }
-}
-
 void FingerprintGrowComponent::update() {
   if (this->enrollment_image_ > this->enrollment_buffers_) {
     this->finish_enrollment(this->save_fingerprint_());
@@ -69,7 +58,26 @@ void FingerprintGrowComponent::update() {
 
 void FingerprintGrowComponent::setup() {
   ESP_LOGCONFIG(TAG, "Setting up Grow Fingerprint Reader...");
+  if (this->power_pin_ != nullptr) {
+    this->power_pin_->setup();
+    this->power_pin_->digital_write(true);
+  }
+  this->finger_ = new Adafruit_Fingerprint(&this->hw_serial_);
+  this->finger_->begin(57600);
+  this->finger_->LEDcontrol(FINGERPRINT_LED_ON, 0, FINGERPRINT_LED_BLUE, 0);
 
+  if (this->finger_->verifyPassword()) {
+    ESP_LOGCONFIG(TAG, "Status: 0x%X", this->finger_->status_reg);
+    ESP_LOGCONFIG(TAG, "Sys ID: 0x%X", this->finger_->system_id);
+    ESP_LOGCONFIG(TAG, "Capacity: %d", this->finger_->capacity);
+    ESP_LOGCONFIG(TAG, "Security level: %d", this->finger_->security_level);
+    ESP_LOGCONFIG(TAG, "Device address: %X", this->finger_->device_addr);
+    ESP_LOGCONFIG(TAG, "Packet len: %d", this->finger_->packet_len);
+    ESP_LOGCONFIG(TAG, "Baud rate: %d", this->finger_->baud_rate);
+    this->finger_->LEDcontrol(FINGERPRINT_LED_BREATHING, 200, FINGERPRINT_LED_BLUE, 0);
+  } else {
+    ESP_LOGE(TAG, "Did not find fingerprint sensor");
+  }
   this->has_sensing_pin_ = (this->sensing_pin_ != nullptr);
   this->has_power_pin_ = (this->sensor_power_pin_ != nullptr);
 
